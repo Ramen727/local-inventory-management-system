@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <title>Add New Part</title>
+</head>
+<body class="modal-body">
+    <header class="modal-header">
+        <h1>Add New Inventory Item</h1>
+    </header>
+    
+    <main class="modal-main">
+        <form id="add-form">
+            <div class="input-group">
+                <label for="item-name">Item Name</label>
+                <input type="text" id="item-name" placeholder="e.g. Drain Pump" required>
+            </div>
+
+            <div class="input-group">
+                <label for="serial-no">Serial Number</label>
+                <input type="text" id="serial-no" placeholder="e.g. WM-102-XP" required>
+            </div>
+
+            <div class="input-group">
+                <label for="quantity">Quantity</label>
+                <input type="number" id="quantity" value="1" min="1" required>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" id="cancel-btn" class="btn-secondary">Cancel</button>
+                <button type="submit" class="btn-primary">Save Part</button>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const form = document.getElementById('add-form');
+        const cancelBtn = document.getElementById('cancel-btn');
+
+        // Close window on cancel
+        cancelBtn.addEventListener('click', () => {
+            window.close();
+        });
+
+        // Handle Form Submission
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const newItem = {
+                name: document.getElementById('item-name').value,
+                serial: document.getElementById('serial-no').value,
+                qty: document.getElementById('quantity').value
+            };
+
+            // Send data back to main process
+            ipcRenderer.send('submit-new-item', newItem);
+            window.close();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "inventory-management-system",
+  "productName": "TCPHUA Inventory System",
+  "version": "1.0.0",
+  "description": "local inventory tracker",
+  "license": "ISC",
+  "author": "edward",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "electron": "^40.6.1"
+  }
+}
