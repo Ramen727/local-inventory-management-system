@@ -3,7 +3,13 @@ const fs = require('fs');
 const path = require('path');
 
 // Tell Electron exactly where to find your data file
-const dataFilePath = path.join(__dirname, 'parts.json');
+//const dataFilePath = path.join(__dirname, 'parts.json');
+
+// 1. Get the safe, hidden "User Data" folder path from Windows/Mac
+const userDataPath = app.getPath('userData');
+
+// 2. Tell the app to save parts.json inside that safe folder instead
+const dataFilePath = path.join(userDataPath, 'parts.json');
 
 let win; 
 let currentItemToProcess = null; // Holds data for the Add/Deduct popups
