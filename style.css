@@ -142,7 +142,8 @@ tbody tr.selected { background-color: #e2f2f1 !important; }
    4. POPUP MODAL STYLES (For your secondary HTML files)
    ========================================== */
 .modal-body { padding-top: 50px; }
-.modal-header { height: 50px; background-color: #34495e; }
+.modal-header { height: 50px; background-color: #34495e; -webkit-app-region: drag; }
+.modal-header button {-webkit-app-region: no-drag;}
 .modal-main { padding: 20px; }
 .input-group { display: flex; flex-direction: column; margin-bottom: 15px; }
 .input-group label { font-size: 0.85rem; font-weight: 600; color: #4b5563; margin-bottom: 5px; }

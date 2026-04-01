@@ -65,7 +65,7 @@ const createWindow = () => {
 // 1. Open the "Add New Item" blank form
 ipcMain.on('open-add-window', () => {
   const addWin = new BrowserWindow({
-    width: 400, height: 500, parent: win, modal: true, autoHideMenuBar: true,
+    width: 400, height: 500, parent: win, modal: true, frame:false, autoHideMenuBar: true,
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
   addWin.loadFile('add-item.html');
@@ -98,7 +98,7 @@ ipcMain.on('delete-items', (event, serialsToDelete) => {
 ipcMain.on('open-add-stock-window', (event, itemData) => {
     currentItemToProcess = itemData;
     const addStockWin = new BrowserWindow({
-      width: 400, height: 350, parent: win, modal: true, autoHideMenuBar: true,
+      width: 400, height: 350, parent: win, modal: true, frame: false, autoHideMenuBar: true,
       webPreferences: { nodeIntegration: true, contextIsolation: false }
     });
     addStockWin.loadFile('add-stock.html');
@@ -108,7 +108,7 @@ ipcMain.on('open-add-stock-window', (event, itemData) => {
 ipcMain.on('open-deduct-window', (event, itemData) => {
   currentItemToProcess = itemData;
   const deductWin = new BrowserWindow({
-    width: 400, height: 350, parent: win, modal: true, autoHideMenuBar: true,
+    width: 400, height: 350, parent: win, modal: true, frame: false, autoHideMenuBar: true,
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
   deductWin.loadFile('deduct-item.html');

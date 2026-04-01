@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <title>Add Stock</title>
+</head>
+<body class="modal-body">
+    <header class="modal-header">
+        <h1>Add Stock</h1>
+    </header>
+    
+    <main class="modal-main">
+        <form id="add-stock-form">
+            <h3 style="color: #2c3e50; margin-bottom: 20px;">
+                Part: <span id="display-name" style="color: #0891b2;">Loading...</span>
+            </h3>
+
+            <div class="input-group">
+                <label for="add-amount">How many are you adding?</label>
+                <input type="number" id="add-amount" value="1" min="1" required>
+            </div>
+
+            <p style="font-size: 0.85rem; color: #6b7280;">
+                Current Stock: <span id="display-stock"></span>
+            </p>
+
+            <div class="form-actions">
+                <button type="button" id="cancel-btn" class="btn-secondary">Cancel</button>
+                <button type="submit" class="btn-primary">Confirm</button>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const form = document.getElementById('add-stock-form');
+        const cancelBtn = document.getElementById('cancel-btn');
+        let currentQty = 0;
+
+        // 1. Ask main.js for the item data
+        ipcRenderer.send('request-item-data');
+
+        // 2. Receive the data and update the HTML
+        ipcRenderer.on('receive-item-data', (event, item) => {
+            document.getElementById('display-name').innerText = item.name;
+            document.getElementById('display-stock').innerText = item.qty;
+            currentQty = parseInt(item.qty);
+        });
+
+        // 3. Handle closing
+        cancelBtn.addEventListener('click', () => {
+            window.close();
+        });
+
+        // 4. Handle math and submission
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const addedAmount = parseInt(document.getElementById('add-amount').value);
+            
+            // MATH: Add to current stock
+            const newTotal = currentQty + addedAmount;
+
+            // Send the final number back to main.js
+            ipcRenderer.send('submit-addition', newTotal);
+            window.close();
+        });
+    </script>
+</body>
+</html>

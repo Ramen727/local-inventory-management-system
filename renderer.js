@@ -100,3 +100,31 @@ ipcRenderer.on('update-ui-table', (event, partsList) => {
         tbody.appendChild(tr);
     });
 });
+
+// ==========================================
+// SEARCH FUNCTIONALITY
+// ==========================================
+const searchInput = document.getElementById('search');
+
+// Listen for every time the user types a letter
+searchInput.addEventListener('keyup', (e) => {
+    // Grab what they typed and make it lowercase so the search is not case-sensitive
+    const searchTerm = e.target.value.toLowerCase();
+    
+    // Grab all the rows currently sitting in the table
+    const rows = document.querySelectorAll('#inventory-body tr');
+
+    // Loop through each row to check if it matches
+    rows.forEach(row => {
+        // Look at the Item Name (Column 2) and Serial No (Column 3)
+        const itemName = row.cells[1].innerText.toLowerCase();
+        const serialNo = row.cells[2].innerText.toLowerCase();
+
+        // If the typed word is inside the Name OR the Serial No, show the row. Else, hide it.
+        if (itemName.includes(searchTerm) || serialNo.includes(searchTerm)) {
+            row.style.display = ''; // Shows the row
+        } else {
+            row.style.display = 'none'; // Hides the row
+        }
+    });
+});
