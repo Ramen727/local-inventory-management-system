@@ -82,6 +82,25 @@ ipcMain.on('submit-new-item', (event, itemData) => {
     console.log("Saved new part:", itemData.partNo);
 });
 
+// 2.5 Quick scan to check for duplicate numbers before saving!
+ipcMain.on('check-duplicate', (event, newItem) => {
+    const parts = loadParts();
+    
+    // Look for exact matches
+    const duplicatePartNo = parts.find(p => p.partNo === newItem.partNo);
+    // Only check Ref No if they actually typed one (prevents matching empty boxes)
+    const duplicateRefNo = newItem.partRefNo !== "" ? parts.find(p => p.partRefNo === newItem.partRefNo) : null;
+
+    // Send the warning message back if we found a match
+    if (duplicatePartNo) {
+        event.returnValue = { isDuplicate: true, message: `Warning: Part No. "${newItem.partNo}" already exists in the database!` };
+    } else if (duplicateRefNo) {
+        event.returnValue = { isDuplicate: true, message: `Warning: Part Ref No. "${newItem.partRefNo}" already exists in the database!` };
+    } else {
+        event.returnValue = { isDuplicate: false }; // All clear!
+    }
+});
+
 // 3. Catch the list of Part Numbers to delete and update the file
 ipcMain.on('delete-parts', (event, partNosToDelete) => {
     let parts = loadParts();

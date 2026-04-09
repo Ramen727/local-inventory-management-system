@@ -60,6 +60,7 @@
         });
 
         // Package the new data format and send it to main.js
+        // Package the new data format and send it to main.js
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             
@@ -67,11 +68,21 @@
                 partNo: document.getElementById('part-no').value,
                 partRefNo: document.getElementById('part-ref-no').value,
                 description: document.getElementById('description').value,
-                qty: document.getElementById('quantity').value,
-                price: document.getElementById('price').value,
+                qty: parseInt(document.getElementById('quantity').value, 10), // Ensures it saves as a real number
+                price: parseFloat(document.getElementById('price').value) || 0, // Ensures it saves as a real number
                 remark: document.getElementById('remark').value
             };
 
+            // NEW: Ask the brain to check for duplicates and wait for the answer
+            const duplicateCheck = ipcRenderer.sendSync('check-duplicate', newItem);
+
+            if (duplicateCheck.isDuplicate) {
+                // If it's a duplicate, show the warning popup and STOP the save process!
+                alert(duplicateCheck.message);
+                return; 
+            }
+
+            // If we made it here, it's not a duplicate. Save it and close the window!
             ipcRenderer.send('submit-new-item', newItem);
             window.close(); 
         });
