@@ -1,77 +1,12 @@
 const { ipcRenderer } = require('electron');
 
-// Toggle row highlight when a checkbox is clicked
-document.addEventListener('change', (e) => {
-    if (e.target.type === 'checkbox') {
-        e.target.closest('tr').classList.toggle('selected');
-    }
-});
-
-// Helper function to safely get the selected row's data
-function getSelectedRowData(checkedBoxes) {
-    const row = checkedBoxes[0].closest('tr');
-    return {
-        name: row.cells[1].innerText,
-        serial: row.cells[2].innerText,
-        qty: parseInt(row.cells[3].innerText)
-    };
-}
-
-// 1. ADD STOCK (Requires 1 Checkbox)
-document.getElementById('btn-add-stock').addEventListener('click', () => {
-    const checked = document.querySelectorAll('tbody input[type="checkbox"]:checked');
-    if (checked.length !== 1) {
-        alert("Please select exactly ONE item to add stock.");
-        return; 
-    }
-    
-    const itemData = getSelectedRowData(checked);
-    ipcRenderer.send('open-add-stock-window', itemData);
-    
-    // Clean up UI
-    checked[0].checked = false;
-    checked[0].closest('tr').classList.remove('selected');
-});
-
-// 2. DEDUCT STOCK (Requires 1 Checkbox)
-document.getElementById('btn-deduct-stock').addEventListener('click', () => {
-    const checked = document.querySelectorAll('tbody input[type="checkbox"]:checked');
-    if (checked.length !== 1) {
-        alert("Please select exactly ONE item to deduct stock.");
-        return; 
-    }
-    
-    const itemData = getSelectedRowData(checked);
-    ipcRenderer.send('open-deduct-window', itemData);
-    
-    // Clean up UI
-    checked[0].checked = false;
-    checked[0].closest('tr').classList.remove('selected');
-});
-
-// 3. ADD NEW ITEM (Database operation: Opens blank form)
+// ==========================================
+// BUTTON LISTENERS (Add your other buttons here as needed)
+// ==========================================
 document.getElementById('btn-new-item').addEventListener('click', () => {
     ipcRenderer.send('open-add-window');
 });
 
-// 4. REMOVE ITEM (Database operation: Deletes whole rows)
-document.getElementById('btn-remove-item').addEventListener('click', () => {
-    const checked = document.querySelectorAll('tbody input[type="checkbox"]:checked');
-    if (checked.length === 0) {
-        alert("Please select at least one item to remove.");
-        return; 
-    }
-    
-    if (confirm(`Are you sure you want to permanently delete ${checked.length} part(s)?`)) {
-        const serialsToDelete = [];
-        checked.forEach(checkbox => {
-            const row = checkbox.closest('tr');
-            serialsToDelete.push(row.cells[2].innerText);
-            row.remove(); // Visually delete it instantly
-        });
-        ipcRenderer.send('delete-items', serialsToDelete);
-    }
-});
 
 // ==========================================
 // DYNAMIC TABLE RENDERING
@@ -79,52 +14,124 @@ document.getElementById('btn-remove-item').addEventListener('click', () => {
 const tbody = document.getElementById('inventory-body');
 
 ipcRenderer.on('update-ui-table', (event, partsList) => {
-    // 1. Wipe the current table clean so we don't duplicate items
-    tbody.innerHTML = ''; 
+    tbody.innerHTML = ''; // Clears the old table
 
-    // 2. Loop through the parts.json data
-    partsList.forEach(part => {
+    partsList.forEach(part => { 
+        const tr = document.createElement('tr'); 
         
-        // 3. Create a brand new HTML row (tr)
-        const tr = document.createElement('tr');
-        
-        // 4. Fill the row with the data
         tr.innerHTML = `
-            <td><input type="checkbox"></td>
-            <td>${part.name}</td>
-            <td>${part.serial}</td>
-            <td>${part.qty}</td>
+            <td><input type="checkbox" class="item-checkbox" value="${part.partNo}"></td>
+            <td>${part.partNo || ''}</td>
+            <td>${part.partRefNo || ''}</td>
+            <td>${part.description || ''}</td>
+            <td>${part.qty === 0 ? '0' : (part.qty || '')}</td>
+            <td>${part.price ? 'RM' + part.price : ''}</td>
+            <td>
+                <input type="text" class="inline-remark" data-id="${part.partNo}" value="${part.remark || ''}" placeholder="Add remark..." style="width: 100%; border: none; background: transparent; outline: none;">
+            </td>
         `;
         
-        // 5. Attach the finished row to the table
-        tbody.appendChild(tr);
+        tbody.appendChild(tr); 
+    });
+});
+
+
+// ==========================================
+// UNIVERSAL SEARCH FUNCTIONALITY
+// ==========================================
+const searchInput = document.getElementById('search');
+
+searchInput.addEventListener('keyup', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('#inventory-body tr');
+
+    rows.forEach(row => {
+        // Look at Part No (1), Ref No (2), Description (3)
+        const partNo = row.cells[1].innerText.toLowerCase();
+        const refNo = row.cells[2].innerText.toLowerCase();
+        const desc = row.cells[3].innerText.toLowerCase();
+
+        // If search term is in any of those 3 columns, show the row
+        if (partNo.includes(searchTerm) || refNo.includes(searchTerm) || desc.includes(searchTerm)) {
+            row.style.display = ''; 
+        } else {
+            row.style.display = 'none'; 
+        }
     });
 });
 
 // ==========================================
-// SEARCH FUNCTIONALITY
+// REMOVE ITEM LOGIC
 // ==========================================
-const searchInput = document.getElementById('search');
-
-// Listen for every time the user types a letter
-searchInput.addEventListener('keyup', (e) => {
-    // Grab what they typed and make it lowercase so the search is not case-sensitive
-    const searchTerm = e.target.value.toLowerCase();
+document.getElementById('btn-remove-item').addEventListener('click', () => {
+    // 1. Find every checkbox on the screen that is currently checked
+    const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
     
-    // Grab all the rows currently sitting in the table
-    const rows = document.querySelectorAll('#inventory-body tr');
+    // 2. If they didn't check any boxes, show a quick warning and stop
+    if (checkedBoxes.length === 0) {
+        alert("Please select at least one item to remove.");
+        return;
+    }
 
-    // Loop through each row to check if it matches
-    rows.forEach(row => {
-        // Look at the Item Name (Column 2) and Serial No (Column 3)
-        const itemName = row.cells[1].innerText.toLowerCase();
-        const serialNo = row.cells[2].innerText.toLowerCase();
+    // 3. Ask for confirmation (a crucial safety feature so they don't accidentally delete stock!)
+    if (confirm(`Are you sure you want to permanently delete ${checkedBoxes.length} item(s)?`)) {
+        
+        // 4. Gather up the Part Numbers from the checked boxes
+        const partsToDelete = Array.from(checkedBoxes).map(box => box.value);
+        
+        // 5. Send the list of Part Numbers to the backend to be deleted
+        ipcRenderer.send('delete-parts', partsToDelete);
+    }
+});
 
-        // If the typed word is inside the Name OR the Serial No, show the row. Else, hide it.
-        if (itemName.includes(searchTerm) || serialNo.includes(searchTerm)) {
-            row.style.display = ''; // Shows the row
-        } else {
-            row.style.display = 'none'; // Hides the row
-        }
-    });
+// ==========================================
+// ADD / DEDUCT STOCK LOGIC
+// ==========================================
+
+// Helper function to figure out which box the admin checked
+function getSelectedPart() {
+    const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        alert("Please check the box of an item first.");
+        return null;
+    }
+    if (checkedBoxes.length > 1) {
+        alert("Please select ONLY ONE item to update stock.");
+        return null;
+    }
+    
+    // Grab the specific row they checked
+    const row = checkedBoxes[0].closest('tr');
+    return {
+        partNo: checkedBoxes[0].value,         // Column 1
+        description: row.cells[3].innerText,   // Column 4
+        qty: row.cells[4].innerText            //Column 5
+    };
+}
+
+// Wire up the Add Stock button
+document.getElementById('btn-add-stock').addEventListener('click', () => {
+    const partData = getSelectedPart();
+    if (partData) ipcRenderer.send('open-add-stock-window', partData);
+});
+
+// Wire up the Deduct Stock button
+document.getElementById('btn-deduct-stock').addEventListener('click', () => {
+    const partData = getSelectedPart();
+    if (partData) ipcRenderer.send('open-deduct-window', partData);
+});
+
+// ==========================================
+// INLINE REMARK AUTO-SAVE
+// ==========================================
+document.getElementById('inventory-body').addEventListener('change', (e) => {
+    // Check if the thing they just typed in was an inline-remark box
+    if (e.target.classList.contains('inline-remark')) {
+        const updatedRemark = e.target.value;
+        const partNumber = e.target.getAttribute('data-id'); 
+        
+        // Send the updated remark to main.js to save it permanently
+        ipcRenderer.send('save-inline-remark', { partNo: partNumber, remark: updatedRemark });
+    }
 });

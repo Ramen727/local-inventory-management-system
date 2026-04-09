@@ -2,9 +2,6 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
-// Tell Electron exactly where to find your data file
-//const dataFilePath = path.join(__dirname, 'parts.json');
-
 // 1. Get the safe, hidden "User Data" folder path from Windows/Mac
 const userDataPath = app.getPath('userData');
 
@@ -33,7 +30,7 @@ function loadParts() {
 function saveParts(partsArray) {
     fs.writeFileSync(dataFilePath, JSON.stringify(partsArray, null, 2)); 
     
-    // NEW: Instantly push the updated list to the front-end!
+    // Instantly push the updated list to the front-end!
     if (win) {
         win.webContents.send('update-ui-table', partsArray);
     }
@@ -57,7 +54,7 @@ const createWindow = () => {
   win.maximize();
   win.loadFile('index.html');
 
-  // NEW: When the window finishes loading, send it the initial data
+  // When the window finishes loading, send it the initial data
   win.webContents.on('did-finish-load', () => {
       const initialData = loadParts();
       win.webContents.send('update-ui-table', initialData);
@@ -65,13 +62,13 @@ const createWindow = () => {
 };
 
 // ==========================================
-// DATABASE OPERATIONS (New Part / Delete Part)
+// DATABASE OPERATIONS (New Part / Delete / Remarks)
 // ==========================================
 
 // 1. Open the "Add New Item" blank form
 ipcMain.on('open-add-window', () => {
   const addWin = new BrowserWindow({
-    width: 400, height: 500, parent: win, modal: true, frame:false, autoHideMenuBar: true,
+    width: 400, height: 600, parent: win, modal: true, frame:false, autoHideMenuBar: true,
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
   addWin.loadFile('add-item.html');
@@ -82,18 +79,33 @@ ipcMain.on('submit-new-item', (event, itemData) => {
     const parts = loadParts(); 
     parts.push(itemData);      
     saveParts(parts);          
-    console.log("Saved new part:", itemData.name);
+    console.log("Saved new part:", itemData.partNo);
 });
 
-// 3. Catch the list of serials to delete and update the file
-ipcMain.on('delete-items', (event, serialsToDelete) => {
+// 3. Catch the list of Part Numbers to delete and update the file
+ipcMain.on('delete-parts', (event, partNosToDelete) => {
     let parts = loadParts();
     
     // Keep only the parts that are NOT in the delete list
-    parts = parts.filter(part => !serialsToDelete.includes(part.serial));
+    parts = parts.filter(part => !partNosToDelete.includes(part.partNo));
     
     saveParts(parts);
     console.log("Deleted parts. Remaining inventory saved.");
+    
+    // Tell the frontend to immediately redraw the table
+    if (win) win.webContents.send('update-ui-table', parts);
+});
+
+// 4. Catch the auto-save command for inline remarks!
+ipcMain.on('save-inline-remark', (event, data) => {
+    const parts = loadParts(); 
+    const partIndex = parts.findIndex(p => p.partNo === data.partNo);
+    
+    if (partIndex !== -1) {
+        parts[partIndex].remark = data.remark;
+        saveParts(parts);
+        console.log(`Saved new remark for ${data.partNo}`);
+    }
 });
 
 // ==========================================
@@ -126,26 +138,42 @@ ipcMain.on('request-item-data', (event) => {
 });
 
 // 4. Catch the deducted math and save it
-ipcMain.on('submit-deduction', (event, newQuantity) => {
+ipcMain.on('submit-deduction', (event, deductAmount) => {
     const parts = loadParts();
-    const partIndex = parts.findIndex(p => p.serial === currentItemToProcess.serial);
+    const partIndex = parts.findIndex(p => p.partNo === currentItemToProcess.partNo);
     
     if (partIndex !== -1) {
-        parts[partIndex].qty = newQuantity; 
+        // 1. Grab the current quantity and force it to be a real Number (not text)
+        let currentQty = parseInt(parts[partIndex].qty || 0, 10);
+        
+        // 2. Do the math!
+        let newTotal = currentQty - deductAmount;
+        
+        // Prevent the stock from accidentally dropping below zero
+        if (newTotal < 0) newTotal = 0; 
+
+        // 3. Save the new total back to the database
+        parts[partIndex].qty = newTotal; 
         saveParts(parts);
-        console.log(`Saved deducted quantity for ${currentItemToProcess.serial}`);
+        console.log(`Saved deducted quantity for ${currentItemToProcess.partNo}`);
     }
 });
 
 // 5. Catch the added math and save it
-ipcMain.on('submit-addition', (event, newQuantity) => {
+ipcMain.on('submit-addition', (event, addedAmount) => {
     const parts = loadParts();
-    const partIndex = parts.findIndex(p => p.serial === currentItemToProcess.serial);
+    const partIndex = parts.findIndex(p => p.partNo === currentItemToProcess.partNo);
     
     if (partIndex !== -1) {
-        parts[partIndex].qty = newQuantity; 
+        // 1. Grab the current quantity and force it to be a real Number
+        let currentQty = parseInt(parts[partIndex].qty || 0, 10);
+        
+        // 2. Do the math!
+        parts[partIndex].qty = currentQty + addedAmount; 
+        
+        // 3. Save the new total back to the database
         saveParts(parts);
-        console.log(`Saved added quantity for ${currentItemToProcess.serial}`);
+        console.log(`Saved added quantity for ${currentItemToProcess.partNo}`);
     }
 });
 

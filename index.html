@@ -9,6 +9,7 @@
     <header>
         <h1>TCPHUA Inventory</h1>
     </header>
+    
     <div class="actions">
         <button type="button" id="btn-add-stock">Add Stock</button>
         <button type="button" id="btn-deduct-stock">Deduct Stock</button>
@@ -17,21 +18,27 @@
         <button type="button" id="btn-remove-item" class="btn-danger">Remove Item</button>
     
         <label for="search" style="margin-left: auto;">Search:</label>
-        <input type="text" id="search" name="search">
+        <input type="text" id="search" name="search" placeholder="Search parts...">
     </div>
+    
     <main>
         <table>
             <thead>
                 <tr>
-                    <th></th> <th>Item</th>
-                    <th>Serial No.</th>
+                    <th></th> 
+                    <th>Part No.</th>
+                    <th>Part Ref No.</th>
+                    <th>Description</th>
                     <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Remark</th>
                 </tr>
             </thead>
             <tbody id="inventory-body">
-            </tbody>
+                </tbody>
         </table>
     </main>
-    <script src="renderer.js"></script>
+
+    <script src="./renderer.js"></script>
 </body>
 </html>
